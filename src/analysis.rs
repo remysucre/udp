@@ -1,1 +1,65 @@
-pub type UAnalysis =();
+use egg::*;
+use std::collections::HashSet;
+
+use crate::lang::*;
+use crate::EGraph;
+
+#[derive(Default, Clone)]
+pub struct UAnalysis;
+
+// Metadata for each class
+#[derive(Debug, PartialEq, Eq)]
+pub struct Data {
+    // Set of free variables by their class ID
+    pub free: HashSet<Symbol>,
+}
+
+impl Analysis<USr> for UAnalysis {
+    type Data = Data;
+
+    fn merge(&mut self, to: &mut Data, from: Data) -> DidMerge {
+        let before_len = to.free.len();
+        // to.free.extend(from.free);
+        to.free.retain(|i| from.free.contains(i));
+        DidMerge(before_len != to.free.len(), true)
+    }
+
+    fn make(egraph: &EGraph, enode: &USr) -> Data {
+        let fvs = |i: &Id| egraph[*i].data.free.iter().copied();
+        let mut free = HashSet::default();
+        match enode {
+            USr::Symbol(v) => {
+                free.insert(*v);
+            }
+            USr::Lam([v, a]) => {
+                free.extend(fvs(a));
+                if let Some(v) = fvs(v).next() {
+                    free.remove(&v);
+                }
+            }
+            USr::Let([v, a, b]) => {
+                free.extend(fvs(b));
+                // NOTE only do this if v free in b?
+                if let Some(v) = fvs(v).next() {
+                    free.remove(&v);
+                }
+                free.extend(fvs(a));
+            }
+            USr::Sig([v, a]) => {
+                free.extend(fvs(a));
+                if let Some(v) = fvs(v).next() {
+                    free.remove(&v);
+                }
+            }
+            USr::Other(_, xs) => {
+                for x in xs {
+                    free.extend(fvs(x));
+                }
+            }
+            _ => enode.for_each(|c| free.extend(&egraph[c].data.free)),
+        }
+
+        Data { free }
+    }
+
+}
