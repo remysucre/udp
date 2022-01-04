@@ -31,25 +31,19 @@ impl Analysis<USr> for UAnalysis {
             USr::Symbol(v) => {
                 free.insert(*v);
             }
-            USr::Lam([v, a]) => {
-                free.extend(fvs(a));
-                if let Some(v) = fvs(v).next() {
-                    free.remove(&v);
-                }
-            }
             USr::Let([v, a, b]) => {
                 free.extend(fvs(b));
                 // NOTE only do this if v free in b?
-                if let Some(v) = fvs(v).next() {
-                    free.remove(&v);
-                }
+                free.remove(&fvs(v).next().unwrap());
                 free.extend(fvs(a));
+            }
+            USr::Lam([v, a]) => {
+                free.extend(fvs(a));
+                free.remove(&fvs(v).next().unwrap());
             }
             USr::Sig([v, a]) => {
                 free.extend(fvs(a));
-                if let Some(v) = fvs(v).next() {
-                    free.remove(&v);
-                }
+                free.remove(&fvs(v).next().unwrap());
             }
             USr::Other(_, xs) => {
                 for x in xs {
