@@ -6,18 +6,22 @@ define_language! {
 
         "+" = Add([Id; 2]),
         "*" = Mul([Id; 2]),
+        "=" = Eql([Id; 2]),
+        "!=" = Neq([Id; 2]),
 
         "not" = Neg(Id),
         "s" = Sqs(Id),
+        "[" = Cnd(Id),
 
-        "sig" = Sig(Id),
-        "sum" = Sum([Id; 2]),
+        "sum" = Sum(Id),
+        "sig" = Sig([Id; 2]),
 
         "app" = App([Id; 2]),
         "lam" = Lam([Id; 2]),
         "let" = Let([Id; 3]),
 
         Symbol(egg::Symbol),
+        Other(Symbol, Vec<Id>),
     }
 }
 
@@ -77,7 +81,29 @@ fn rules() -> Vec<Rewrite<Usr, UAnalysis>> {
 
     // summation axioms
     rls.extend(vec![
+        rw!("7";   "(sig ?t (+ ?a ?b))" => "(+ (sig ?t ?a) (sig ?t ?b))"),
+        rw!("7-r"; "(+ (sig ?t ?a) (sig ?t ?b))" => "(sig ?t (+ ?a ?b))"),
+        rw!("8"; "(sig ?s (sig ?t ?a))" => "(sig ?s (sig ?t ?a))"),
+        // TODO fix this
+        rw!("9";   "(* ?x (sig ?t ?y))" => "(sig ?t (* ?x ?y))"),
+        rw!("9-r"; "(sig ?t (* ?x ?y))" => "(* ?x (sig ?t ?y))"),
+        rw!("10";   "(s (sig ?t ?a))" => "(s (sig ?t (s ?a)))"),
+        rw!("10-r"; "(s (sig ?t (s ?a)))" => "(s (sig ?t ?a))"),
+    ]);
 
+    // conditional axioms
+    rls.extend(vec![
+        rw!("eq-comm"; "(= ?x ?y)" => "(= ?y ?x)"),
+        rw!("neq";   "(not (= ?x ?y))" => "(!= ?x ?y)"),
+        rw!("neq-r"; "(!= ?x ?y)" => "(not (= ?x ?y))"),
+
+        rw!("11";   "([ ?b)" => "(s ([ ?b))"),
+        rw!("11-r";   "(s ([ ?b))" => "([ ?b)"),
+        rw!("12"; "(+ ([ (= ?a ?b)) ([ (!= ?a ?b)))"=>"1"),
+        // TODO fix this
+        rw!("13"; "(* (f ?x) ([ (= ?x ?y)))" => "(* (f ?y) ([ (= ?x ?y)))"),
+        // TODO fix this
+        rw!("14"; "(sig ?t ([ (= ?t ?e)))" => "1"),
     ]);
     
     rls
