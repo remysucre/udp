@@ -45,7 +45,7 @@ pub struct CaptureAvoid {
 }
 
 impl Applier<USr, UAnalysis> for CaptureAvoid {
-    fn apply_one(&self, egraph: &mut EGraph, eclass: Id, subst: &Subst, searcher_ast: Option<&PatternAst<USr>>, rule_name: Symbol) -> Vec<Id> {
+    fn apply_one(&self, egraph: &mut EGraph, eclass: Id, subst: &Subst, _searcher_ast: Option<&PatternAst<USr>>, _rule_name: Symbol) -> Vec<Id> {
     let e = subst[self.e];
         let v2 = egraph[subst[self.v2]].data.free.iter().next().unwrap();
         let v2_free_in_e = egraph[e].data.free.contains(&v2);
@@ -68,7 +68,7 @@ pub struct RenameSig {
 }
 
 impl Applier<USr, UAnalysis> for RenameSig {
-    fn apply_one(&self, egraph: &mut EGraph, eclass: Id, subst: &Subst, searcher_ast: Option<&PatternAst<USr>>, rule_name: Symbol) -> Vec<Id> {
+    fn apply_one(&self, egraph: &mut EGraph, eclass: Id, subst: &Subst, _searcher_ast: Option<&PatternAst<USr>>, _rule_name: Symbol) -> Vec<Id> {
         let mut subst = subst.clone();
         let sym = egraph.add(USr::Symbol(format!("_{}", eclass).into()));
         subst.insert(self.fresh, sym);
@@ -83,25 +83,10 @@ pub struct Destroy<A: Applier<USr, UAnalysis>> {
 }
 
 impl<A: Applier<USr, UAnalysis>> Applier<USr, UAnalysis> for Destroy<A> {
-    fn apply_one(&self, egraph: &mut EGraph, eclass: Id, subst: &Subst, searcher_ast: Option<&PatternAst<USr>>, rule_name: Symbol) -> Vec<Id> {
+    fn apply_one(&self, egraph: &mut EGraph, eclass: Id, subst: &Subst, _searcher_ast: Option<&PatternAst<USr>>, _rule_name: Symbol) -> Vec<Id> {
         egraph[eclass].nodes.clear();
         self.e.apply_one(egraph, eclass, subst, None, "destroy".parse().unwrap())
     }
-}
-
-fn rw_1(
-    name: &'static str,
-    lhs: &'static str,
-    rhs: &'static str,
-) -> Rewrite<USr, UAnalysis> {
-    Rewrite::new(
-        name,
-        lhs.parse::<Pattern<USr>>().unwrap(),
-        Destroy {
-            e: rhs.parse::<Pattern<USr>>().unwrap(),
-        },
-    )
-    .unwrap()
 }
 
 pub fn rules() -> Vec<Rewrite<USr, UAnalysis>> {
