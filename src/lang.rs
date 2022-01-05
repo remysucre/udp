@@ -17,9 +17,6 @@ define_language! {
 
         "sum" = Sum(Id),
         "sig" = Sig([Id; 2]),
-
-        "app" = App([Id; 2]),
-        "lam" = Lam([Id; 2]),
         "let" = Let([Id; 3]),
 
         Symbol(egg::Symbol),

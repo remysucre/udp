@@ -37,10 +37,6 @@ impl Analysis<USr> for UAnalysis {
                 free.remove(v);
                 free.extend(fvs(a));
             }
-            USr::Lam([v, a]) => {
-                free.extend(fvs(a));
-                free.remove(v);
-            }
             USr::Sig([v, a]) => {
                 free.extend(fvs(a));
                 free.remove(v);
