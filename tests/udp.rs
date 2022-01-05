@@ -16,6 +16,14 @@ fn prove_eqs(exprs: &[&str], rls: &[Rewrite<USr, UAnalysis>]) {
 }
 
 #[test]
+fn lemma_5_1() {
+    prove_eqs(&vec![
+            "(|| (+ (* (var a) (|| (var x))) (var y)))",
+            "(|| (+ (* (var a) (var x)) (var y)))",
+        ], &rules())
+}
+
+#[test]
 fn equality_semantics() {
     prove_eqs(&vec!["(sig t (* (var t) ([] (= (var t) (var e)))))","(var e)"], &rules())
 }
