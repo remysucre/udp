@@ -167,7 +167,6 @@ pub fn rules() -> Vec<Rewrite<USr, UAnalysis>> {
         rw!("7";   "(sig ?t (+ ?a ?b))" => "(+ (sig ?t ?a) (sig ?t ?b))"),
         rw!("7-r"; "(+ (sig ?t ?a) (sig ?t ?b))" => "(sig ?t (+ ?a ?b))"),
         rw!("8"; "(sig ?s (sig ?t ?a))" => "(sig ?s (sig ?t ?a))"),
-        // TODO fix this
         rw!("9";   "(* ?x (sig ?t ?y))" => "(sig ?t (* ?x ?y))"),
         rw!("9-bound";   "(* ?b (sig ?x ?a))" => "(sig ?x (* ?b ?a))"
                 if not_free(var("?x"), var("?b"))),
@@ -194,10 +193,8 @@ pub fn rules() -> Vec<Rewrite<USr, UAnalysis>> {
         rw!("11";   "([ ?b)" => "(s ([ ?b))"),
         rw!("11-r";   "(s ([ ?b))" => "([ ?b)"),
         rw!("12"; "(+ ([ (= ?a ?b)) ([ (!= ?a ?b)))"=>"1"),
-        // TODO fix this
-        // rw!("13"; "(* (f ?x) ([ (= ?x ?y)))" => "(* (f ?y) ([ (= ?x ?y)))"),
-        // TODO fix this
-        // rw!("14"; "(sig ?t ([ (= ?t ?e)))" => "1"),
+        rw!("13"; "(* ?e ([ (= ?x ?y)))" => "(* (let ?x ?y ?e) ([ (= ?x ?y)))"),
+        rw!("14"; "(sig ?t ([ (= ?t ?e)))" => "1" if not_free(var("?t"), var("?e"))),
     ]);
     
     rls
