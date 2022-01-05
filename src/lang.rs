@@ -3,6 +3,8 @@ use egg::*;
 define_language! {
     pub enum USr {
         Num(i32),
+        
+        "var" = Var(Id),
 
         "+" = Add([Id; 2]),
         "*" = Mul([Id; 2]),
@@ -10,8 +12,8 @@ define_language! {
         "!=" = Neq([Id; 2]),
 
         "not" = Neg(Id),
-        "s" = Sqs(Id),
-        "[" = Cnd(Id),
+        "||" = Sqs(Id),
+        "[]" = Cnd(Id),
 
         "sum" = Sum(Id),
         "sig" = Sig([Id; 2]),

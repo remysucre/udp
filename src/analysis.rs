@@ -11,7 +11,7 @@ pub struct UAnalysis;
 #[derive(Debug, PartialEq, Eq)]
 pub struct Data {
     // Set of free variables by their class ID
-    pub free: HashSet<Symbol>,
+    pub free: HashSet<Id>,
 }
 
 impl Analysis<USr> for UAnalysis {
@@ -28,25 +28,22 @@ impl Analysis<USr> for UAnalysis {
         let fvs = |i: &Id| egraph[*i].data.free.iter().copied();
         let mut free = HashSet::default();
         match enode {
-            USr::Symbol(v) => {
+            USr::Var(v) => {
                 free.insert(*v);
             }
             USr::Let([v, a, b]) => {
                 free.extend(fvs(b));
                 // NOTE only do this if v free in b?
-                free.remove(&fvs(v).next().unwrap());
+                free.remove(v);
                 free.extend(fvs(a));
             }
             USr::Lam([v, a]) => {
                 free.extend(fvs(a));
-                free.remove(&fvs(v).next().unwrap());
+                free.remove(v);
             }
             USr::Sig([v, a]) => {
-                println!("{:?}", enode);
-                println!("{:?}", egraph[*v].nodes);
-                println!("{:?}", egraph[*a].nodes);
                 free.extend(fvs(a));
-                free.remove(&fvs(v).next().unwrap());
+                free.remove(v);
             }
             USr::Other(_, xs) => {
                 for x in xs {
