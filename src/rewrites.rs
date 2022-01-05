@@ -89,6 +89,83 @@ impl<A: Applier<USr, UAnalysis>> Applier<USr, UAnalysis> for Destroy<A> {
     }
 }
 
+pub fn small() -> Vec<Rewrite<USr, UAnalysis>> {
+    let mut rls = vec![
+        rw!("assoc-add";   "(+ ?a (+ ?b ?c))" => "(+ (+ ?a ?b) ?c)"),
+        rw!("assoc-add-r"; "(+ (+ ?a ?b) ?c)" => "(+ ?a (+ ?b ?c))"),
+        rw!("assoc-mul";   "(* ?a (* ?b ?c))" => "(* (* ?a ?b) ?c)"),
+        rw!("assoc-mul-r"; "(* (* ?a ?b) ?c)" => "(* ?a (* ?b ?c))"),
+
+        rw!("comm-add";  "(+ ?a ?b)" => "(+ ?b ?a)"),
+        rw!("comm-mul";  "(* ?a ?b)" => "(* ?b ?a)"),
+        
+        rw!("zero-add"; "(+ ?a 0)" => "?a"),
+        rw!("zero-mul"; "(* ?a 0)" => "0"),
+        rw!("one-mul";  "(* ?a 1)" => "?a"),
+    
+        // rw!("add-zero"; "?a" => "(+ ?a 0)"),
+        // rw!("mul-one";  "?a" => "(* ?a 1)"),
+
+        rw!("distribute"; "(* ?a (+ ?b ?c))"        => "(+ (* ?a ?b) (* ?a ?c))"),
+        rw!("factor"    ; "(+ (* ?a ?b) (* ?a ?c))" => "(* ?a (+ ?b ?c))"),    
+    ];
+
+    rls.extend(vec![
+        rw!("let-const"; "(let ?v ?e ?c)" => "?c" if is_const(var("?c"))),
+        rw!("let-var-same"; "(let ?v1 ?e ?v1)" => "?e"),
+        rw!("let-var-diff"; "(let ?v1 ?e ?v2)" => "?v2"
+            if is_not_same_var(var("?v1"), var("?v2"))),
+        rw!("let-sig-same"; "(let ?v1 ?e (sig ?v1 ?body))" => "(sig ?v1 ?body)"),
+        // rw!("let-sig-diff";
+        //     "(let ?v1 ?e (sig ?v2 ?body))" =>
+        //     { CaptureAvoid {
+        //         fresh: var("?fresh"), v2: var("?v2"), e: var("?e"),
+        //         if_not_free: "(sig ?v2 (let ?v1 ?e ?body))".parse().unwrap(),
+        //         if_free: "(sig ?fresh (let ?v1 ?e (let ?v2 ?fresh ?body)))".parse().unwrap(),
+        //     }}
+        //     if is_not_same_var(var("?v1"), var("?v2"))),
+        rw!("let-add";    "(let ?v ?e (+ ?a ?b))" => "(+ (let ?v ?e ?a) (let ?v ?e ?b))"),
+        rw!("let-add-r";  "(+ (let ?v ?e ?a) (let ?v ?e ?b))" => "(let ?v ?e (+ ?a ?b))"),
+        rw!("let-eq";     "(let ?v ?e (= ?a ?b))" => "(= (let ?v ?e ?a) (let ?v ?e ?b))"),
+        rw!("let-eq-r";   "(= (let ?v ?e ?a) (let ?v ?e ?b))" => "(let ?v ?e (= ?a ?b))"),
+    ]);
+
+    // summation axioms
+    rls.extend(vec![
+        // rw!("7";   "(sig ?t (+ ?a ?b))" => "(+ (sig ?t ?a) (sig ?t ?b))"),
+        // rw!("7-r"; "(+ (sig ?t ?a) (sig ?t ?b))" => "(sig ?t (+ ?a ?b))"),
+        // rw!("8"; "(sig ?s (sig ?t ?a))" => "(sig ?s (sig ?t ?a))"),
+        rw!("9-bound";   "(* ?b (sig ?x ?a))" => "(sig ?x (* ?b ?a))"
+                if not_free(var("?x"), var("?b"))),
+        rw!("9-bound-r"; "(sig ?x (* ?b ?a))" => "(* ?b (sig ?x ?a))"
+                if not_free(var("?x"), var("?b"))),
+        // rw!("9-free";
+        //     "(* ?b (sig ?x ?a))" =>
+        //     { RenameSig {
+        //         fresh: var("?fresh"),
+        //         e: "(sig ?fresh (* ?b (let ?x ?fresh ?a)))".parse().unwrap()
+        //     }}
+        //     if free(var("?x"), var("?b"))),
+        // rw!("10";   "(s (sig ?t ?a))" => "(s (sig ?t (s ?a)))"),
+        // rw!("10-r"; "(s (sig ?t (s ?a)))" => "(s (sig ?t ?a))"),
+    ]);
+
+    // conditional axioms
+    rls.extend(vec![
+        rw!("eq-comm"; "(= ?x ?y)" => "(= ?y ?x)"),
+        // rw!("neq";   "(not (= ?x ?y))" => "(!= ?x ?y)"),
+        // rw!("neq-r"; "(!= ?x ?y)" => "(not (= ?x ?y))"),
+
+        // rw!("11";   "([ ?b)" => "(s ([ ?b))"),
+        // rw!("11-r";   "(s ([ ?b))" => "([ ?b)"),
+        // rw!("12"; "(+ ([ (= ?a ?b)) ([ (!= ?a ?b)))"=>"1"),
+        rw!("13"; "(* ?e ([ (= ?x ?y)))" => "(* (let ?x ?y ?e) ([ (= ?x ?y)))"),
+        rw!("14"; "(sig ?t ([ (= ?t ?e)))" => "1" if not_free(var("?t"), var("?e"))),
+    ]);
+    
+    rls
+}
+
 pub fn rules() -> Vec<Rewrite<USr, UAnalysis>> {
     // USr axioms
     let mut rls = vec![
@@ -118,14 +195,14 @@ pub fn rules() -> Vec<Rewrite<USr, UAnalysis>> {
         rw!("let-var-diff"; "(let ?v1 ?e ?v2)" => "?v2"
             if is_not_same_var(var("?v1"), var("?v2"))),
         rw!("let-sig-same"; "(let ?v1 ?e (sig ?v1 ?body))" => "(sig ?v1 ?body)"),
-        rw!("let-sig-diff";
-            "(let ?v1 ?e (sig ?v2 ?body))" =>
-            { CaptureAvoid {
-                fresh: var("?fresh"), v2: var("?v2"), e: var("?e"),
-                if_not_free: "(sig ?v2 (let ?v1 ?e ?body))".parse().unwrap(),
-                if_free: "(sig ?fresh (let ?v1 ?e (let ?v2 ?fresh ?body)))".parse().unwrap(),
-            }}
-            if is_not_same_var(var("?v1"), var("?v2"))),
+        // rw!("let-sig-diff";
+        //     "(let ?v1 ?e (sig ?v2 ?body))" =>
+        //     { CaptureAvoid {
+        //         fresh: var("?fresh"), v2: var("?v2"), e: var("?e"),
+        //         if_not_free: "(sig ?v2 (let ?v1 ?e ?body))".parse().unwrap(),
+        //         if_free: "(sig ?fresh (let ?v1 ?e (let ?v2 ?fresh ?body)))".parse().unwrap(),
+        //     }}
+        //     if is_not_same_var(var("?v1"), var("?v2"))),
         rw!("let-add";    "(let ?v ?e (+ ?a ?b))" => "(+ (let ?v ?e ?a) (let ?v ?e ?b))"),
         rw!("let-add-r";  "(+ (let ?v ?e ?a) (let ?v ?e ?b))" => "(let ?v ?e (+ ?a ?b))"),
         rw!("let-eq";     "(let ?v ?e (= ?a ?b))" => "(= (let ?v ?e ?a) (let ?v ?e ?b))"),
@@ -167,19 +244,17 @@ pub fn rules() -> Vec<Rewrite<USr, UAnalysis>> {
         rw!("7";   "(sig ?t (+ ?a ?b))" => "(+ (sig ?t ?a) (sig ?t ?b))"),
         rw!("7-r"; "(+ (sig ?t ?a) (sig ?t ?b))" => "(sig ?t (+ ?a ?b))"),
         rw!("8"; "(sig ?s (sig ?t ?a))" => "(sig ?s (sig ?t ?a))"),
-        rw!("9";   "(* ?x (sig ?t ?y))" => "(sig ?t (* ?x ?y))"),
         rw!("9-bound";   "(* ?b (sig ?x ?a))" => "(sig ?x (* ?b ?a))"
                 if not_free(var("?x"), var("?b"))),
         rw!("9-bound-r"; "(sig ?x (* ?b ?a))" => "(* ?b (sig ?x ?a))"
                 if not_free(var("?x"), var("?b"))),
-        rw!("9-free";
-            "(* ?b (sig ?x ?a))" =>
-            { RenameSig {
-                fresh: var("?fresh"),
-                e: "(sig ?fresh (* ?b (let ?x ?fresh ?a)))".parse().unwrap()
-            }}
-            if free(var("?x"), var("?b"))),
-        rw!("9-r"; "(sig ?t (* ?x ?y))" => "(* ?x (sig ?t ?y))"),
+        // rw!("9-free";
+        //     "(* ?b (sig ?x ?a))" =>
+        //     { RenameSig {
+        //         fresh: var("?fresh"),
+        //         e: "(sig ?fresh (* ?b (let ?x ?fresh ?a)))".parse().unwrap()
+        //     }}
+        //     if free(var("?x"), var("?b"))),
         rw!("10";   "(s (sig ?t ?a))" => "(s (sig ?t (s ?a)))"),
         rw!("10-r"; "(s (sig ?t (s ?a)))" => "(s (sig ?t ?a))"),
     ]);

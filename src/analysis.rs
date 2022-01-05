@@ -42,6 +42,9 @@ impl Analysis<USr> for UAnalysis {
                 free.remove(&fvs(v).next().unwrap());
             }
             USr::Sig([v, a]) => {
+                println!("{:?}", enode);
+                println!("{:?}", egraph[*v].nodes);
+                println!("{:?}", egraph[*a].nodes);
                 free.extend(fvs(a));
                 free.remove(&fvs(v).next().unwrap());
             }
