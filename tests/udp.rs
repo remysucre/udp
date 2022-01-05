@@ -1,7 +1,7 @@
 use egg::*;
-use usr::lang::*;
-use usr::analysis::*;
-use usr::rewrites::*;
+use udp::lang::*;
+use udp::analysis::*;
+use udp::rewrites::*;
 
 fn prove_eqs(exprs: &[&str], rls: &[Rewrite<USr, UAnalysis>]) {
     let mut runner = Runner::default();
