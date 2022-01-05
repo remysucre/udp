@@ -1,23 +1,42 @@
-// use egg::*;
+use egg::*;
 // use usr::lang::*;
 use usr::rewrites::*;
 
-egg::test_fn! {
-    spnf, rules(),
-    "(sig t1 (sig t2 (sig t3
-        (* ([ (= t2 t)) 
-            (* ([ (= (. t1 k) (. t2 k)))
-                (* ([ (>= (. t1 a) 12)) 
-                    (* ([ (= (. t3 k) (. t1 k))) 
-                        (* ([ (= (. t3 a) (. t1 a))) 
-                            (* (R t3) 
-                                (R t2))))))))))" 
-    => 
-    "(sig t1 (sig t2 
-        (* ([ (= t2 t)) 
-            (* (* ([ (= (. t1 k) (. t2 k)))
-                        ([ (>= (. t1 a) 12))) 
-                        (sig t3 (* (* ([ (= (. t3 k) (. t1 k))) 
-                        (* ([ (= (. t3 a) (. t1 a))) (R t3)))
-                (R t2)))))))"
+fn prove_eqs(exprs: &[&str]) {
+    let mut runner = Runner::default();
+    for e in exprs {
+        runner = runner.with_expr(&e.parse().unwrap());
+    }
+    runner = runner.run(&rules());
+    for (i, _) in exprs.iter().enumerate() {
+        assert_eq!(runner.egraph.find(runner.roots[0]), runner.egraph.find(runner.roots[i]));
+    }
+}
+
+#[test]
+fn spnf() {
+    prove_eqs(&vec![
+        "(sig t1 (sig t2 (sig t3
+            (* ([ (= t2 t)) 
+                (* ([ (= (. t1 k) (. t2 k)))
+                    (* ([ (>= (. t1 a) 12)) 
+                        (* ([ (= (. t3 k) (. t1 k))) 
+                            (* ([ (= (. t3 a) (. t1 a))) 
+                                (* (R t3) 
+                                    (R t2))))))))))",
+        "(sig t1 (sig t2 
+            (* ([ (= t2 t)) 
+                (* (* ([ (= (. t1 k) (. t2 k)))
+                            ([ (>= (. t1 a) 12))) 
+                            (sig t3 (* (* ([ (= (. t3 k) (. t1 k))) 
+                            (* ([ (= (. t3 a) (. t1 a))) (R t3)))
+                    (R t2)))))))",
+        "(sig t1 (sig t2 
+            (* ([ (= t2 t)) 
+                (* (sig t3 (* ([ (= (. t3 k) (. t1 k))) 
+                            (* ([ (= (. t3 a) (. t1 a))) (R t3))))
+                    (* (R t2) 
+                        (* ([ (= (. t1 k) (. t2 k)))
+                            ([ (>= (. t1 a) 12))))))))",
+    ])
 }
